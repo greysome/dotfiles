@@ -54,7 +54,7 @@
 (setq make-backup-files nil)
 
 ;; load theme
-(set-frame-font "Roboto Mono-12" nil t)
+(set-frame-font "Roboto Mono-11" nil t)
 (add-to-list 'custom-theme-load-path "~/.emacs.d")
 (require 'doom-themes)
 (setq doom-themes-enable-bold t
@@ -163,16 +163,24 @@
 (exwm-input-set-key (kbd "s-<tab>") 'other-window)
 (exwm-input-set-key (kbd "s-d") 'kill-this-buffer)
 (exwm-input-set-key (kbd "s-e") 'eval-defun)
-(exwm-input-set-key (kbd "s-q") 'exwm-input-send-next-key)
+(exwm-input-set-key (kbd "s-k") 'exwm-input-send-next-key)
+(exwm-input-set-key (kbd "s-w") 'exwm-floating-toggle-floating)
 (exwm-input-set-key (kbd "s-.") 'yas/new-snippet)
 
-(start-process-shell-command "" nil "python3 ~/bin/lemonbar_status.py")
+;; launch urxvt
+(exwm-input-set-key (kbd "s-t")
+		    (lambda () (interactive)
+		      (start-process-shell-command "" nil "urxvt")))
 
-(defun bash ()
-  "Launch bash in a terminal."
-  (interactive)
-  (ansi-term "/bin/bash"))
-(define-key global-map (kbd "s-t") 'bash)
+; volume down
+(exwm-input-set-key (kbd "s-<f11>")
+		    (lambda () (interactive)
+		      (shell-command "amixer --quiet -c 1 sset Master 10%-")))
+
+; volume up
+(exwm-input-set-key (kbd "s-<f12>")
+		    (lambda () (interactive)
+		      (shell-command "amixer --quiet -c 1 sset Master 10%+")))
 
 (defun sensible-split ()
   "Split horizontally if width of current window > height.
@@ -183,17 +191,8 @@ Otherwise split vertically."
     (split-window-below)))
 (exwm-input-set-key (kbd "s-p") 'sensible-split)
 
-(defun volume-down ()
-  "Turn the volume up 10%."
-  (interactive)
-  (shell-command "amixer --quiet -c 1 sset Master 10%-"))
-(exwm-input-set-key (kbd "s-<f11>") 'volume-down)
-
-(defun volume-up ()
-  "Turn the volume down 10%."
-  (interactive)
-  (shell-command "amixer --quiet -c 1 sset Master 10%+"))
-(exwm-input-set-key (kbd "s-<f12>") 'volume-up)
+;; run bar (at the top)
+(start-process-shell-command "" nil "python3 ~/bin/lemonbar_status.py")
 
 (custom-set-variables
  ;; custom-set-variables was added by Custom.

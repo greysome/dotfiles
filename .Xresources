@@ -1,0 +1,13 @@
+Xft.antialias: 1
+Xft.dpi: 96
+Xft.hinting: 1
+Xft.hintstyle: hintfull
+Xft.rgba: rgb
+Xft.lcdfilter: lcddefault
+
+URxvt.background: #2b2a27
+URxvt.foreground: #ede0ce
+URxvt.cursorColor: #ff5d38
+URxvt.scrollBar: false
+URxvt.letterSpace: -1
+URxvt.font: xft:Roboto Mono:size=12
