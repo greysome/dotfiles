@@ -7,10 +7,14 @@ import socket
 import subprocess
 import psutil
 
-FONT_TEXT = 'Roboto Mono-11'
-GEOMETRY = 'x25+0+0'
+WIDTH = ''
+HEIGHT = 35
+X = 0
+Y = 0
+GEOMETRY = f'{WIDTH}x{HEIGHT}+{X}+{Y}'
+FONT = 'Iosevka-12'
 BATTERY_DIR = '/sys/class/power_supply/BAT0'
-DELAY = 1
+DELAY = 0.1
 
 def format_fg(color):
     return '%{F' + color + '}'
@@ -18,17 +22,18 @@ def format_fg(color):
 def format_bg(color):
     return '%{B' + color + '}'
 
-FG_BODY_NORMAL = format_fg('#ede0ce')
-FG_HEADER_NORMAL = format_fg('#f8f8f0')
+FG_BODY_NORMAL = format_fg('#cccccc')
+BG_BODY_NORMAL = format_bg('#444444')
+FG_HEADER_NORMAL = format_fg('#ffffff')
+BG_HEADER_NORMAL = format_bg('#444444')
 FG_LOW_BATTERY = format_fg('#ffffff')
-BG_BODY_NORMAL = format_bg('#2b2a2c')
-BG_HEADER_NORMAL = format_bg('#2b2a2c')
 BG_LOW_BATTERY = format_bg('#ee0000')
-BG_BAR = '#2b2a2c'
+BG_BAR = '#000000'
 CENTER = '%{c}'
 LEFT = '%{l}'
 RIGHT = '%{r}'
 SEPARATOR = ' '
+cycle_num = 0
 
 def get_stdout(command):
     pipe = subprocess.Popen(command.split(' '),
@@ -60,9 +65,10 @@ def status_battery_status():
 def status_connected():
     try:
         socket.create_connection(('www.google.com', 80))
-        return True
     except OSError:
         return False
+    else:
+        return True
 
 def status_network():
     interfaces = get_stdout('iwconfig')
@@ -83,9 +89,11 @@ def status_workspaces():
 
     workspaces_str = ''
     for i in range(num_workspaces):
-        workspaces_str += ('(*)' if i == cur_workspace else '()')
+        workspaces_str += '{}{}'.format(format_fg('#ffffff') if i == cur_workspace
+                                        else format_fg('#999999'), i+1)
         if i < num_workspaces-1:
-            workspaces_str += ' '
+            workspaces_str += '  '
+    workspaces_str += FG_BODY_NORMAL
             
     return workspaces_str
 
@@ -121,23 +129,27 @@ def write_bar(bar, display_string):
         exit()
 
 def run():
-    status = subprocess.Popen(['lemonbar', '-p', '-g', GEOMETRY,
-                               '-o', '1', '-f', FONT_TEXT,
+    global cycle_num
+    status = subprocess.Popen(['lemonbar', '-d', '-p', '-g', GEOMETRY,
+                               '-o', '1', '-f', FONT,
                                '-B', BG_BAR],
                                stdin=subprocess.PIPE,
                                stdout=subprocess.PIPE)
     while True:
         datetime = status_datetime()
         volume = status_volume()
-        battery_level = status_battery_level()
-        battery_status = status_battery_status()
-        connected = status_connected()
-        if connected:
-            network = status_network()
         workspaces = status_workspaces()
         cpu = status_cpu()
         ram = status_ram()
         disk = status_disk()
+
+        # run expensive network operations only once in a while
+        if cycle_num % 40 == 0:
+            battery_level = status_battery_level()
+            battery_status = status_battery_status()
+            connected = status_connected()
+            if connected:
+                network = status_network()
 
         low_battery = battery_level < 15 and battery_status == 'D'
         fg_header = (FG_LOW_BATTERY if low_battery else FG_HEADER_NORMAL)
@@ -147,27 +159,22 @@ def run():
 
         sections_status = [
             Section(LEFT, fg_header, bg_header,
-                    '', fg_body, bg_body, str(datetime)),
-            Section(LEFT, fg_header, bg_header,
+                    '', fg_body, bg_body, workspaces),
+            Section(CENTER, fg_header, bg_header,
+                    str(datetime), fg_body, bg_body, ''),
+            Section(RIGHT, fg_header, bg_header,
                     'VOL', fg_body, bg_body, str(volume)),
-            Section(LEFT, fg_header, bg_header,
+            Section(RIGHT, fg_header, bg_header,
                     'BAT', fg_body, bg_body, '{} {}'.format(battery_level,
                                                             battery_status)),
-            Section(LEFT, fg_header, bg_header,
-                    'WIFI', fg_body, bg_body, (network if connected else '-')),
-            Section(CENTER, fg_header, bg_header,
-                    workspaces, fg_body, bg_body, ''),
             Section(RIGHT, fg_header, bg_header,
-                    'CPU', fg_body, bg_body, cpu),
-            Section(RIGHT, fg_header, bg_header,
-                    'RAM', fg_body, bg_body, ram),
-            Section(RIGHT, fg_header, bg_header,
-                    'DISK', fg_body, bg_body, disk)
+                    'WIFI', fg_body, bg_body, (network if connected else '-'))
         ]
         display_string = sections_to_string(sections_status, SEPARATOR)
         write_bar(status, display_string)
 
         sleep(DELAY)
+        cycle_num += 1
 
 if __name__ == '__main__':
     run()
